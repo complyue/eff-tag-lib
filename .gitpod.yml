@@ -1,0 +1,48 @@
+image:
+  file: .gitpod.Dockerfile
+
+ports:
+  - port: 1024-6000
+    onOpen: ignore
+
+tasks:
+  - name: Build Đ Tooling
+    init: |
+      # prepare ws/bin, install epm there, for later upgrade without docker image rebuilt
+      mkdir -p /workspace/bin
+      # /workspace/bin/epm should have been symbolinked to /usr/local/bin/epm
+      curl -o /workspace/bin/epm -L https://github.com/e-wrks/epm/raw/latest/epm
+      chmod a+x /workspace/bin/epm
+      # prepare /workspace as an epm home
+      cd /workspace
+      epm init \
+       -B https://github.com/e-wrks \
+        edh \
+       -B http://github.com/complyue \
+        eff-tag-lib nedh els
+      cd /workspace/edh-universe
+      # do HLS a favor
+      stack install implicit-hie
+      epm x gen-hie > hie.yaml
+      # build & install executables from Edh packages
+      stack update
+      stack install
+    command: |
+      # update packages in root epm home
+      cd /workspace/edh-universe
+      epm up
+      epm i
+      epm x gen-hie > hie.yaml
+      # update executables from Edh packages
+      stack update
+      stack install
+      gp open '/workspace/eff-tag-lib/poc.edh'
+
+vscode:
+  extensions:
+    - justusadam.language-haskell
+    - haskell.haskell
+    - complyue.edh-vscode-syntax
+    - complyue.edh-vscode-formatter
+    - complyue.edh-vscode-lsc
+    - complyue.edh-vscode-pack
