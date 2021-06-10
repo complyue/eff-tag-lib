@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ComplYue.edh-vscode-syntax",
+    "ComplYue.edh-vscode-formatter",
+    "ComplYue.edh-vscode-lsc",
+    "ComplYue.edh-vscode-pack",
+    "ComplYue.haskit-vscode",
+    "justusadam.language-haskell",
+    "haskell.haskell"
+  ],
+  "unwantedRecommendations": []
+}
