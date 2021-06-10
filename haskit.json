@@ -1,6 +1,7 @@
 {
   "edh.terminal.cmdl": [
-    "cabal run edh:edh",
-    "stack run edh"
+    "edh",
+    "stack run edh",
+    "cabal run edh:edh"
   ]
 }

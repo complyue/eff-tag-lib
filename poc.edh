@@ -1,7 +1,7 @@
 
 # %%
 
-# use these symbolic attribute names, to avoid possibly name clashes, including esp. those alphanumic argument names for html attributes to be passed as lib procuedure arguments
+# use these symbolic attribute names, to avoid possibly name clashes, including esp. those alphanumeric argument names for html attributes to be passed as lib procedure arguments
 symbol @tag'name
 symbol @tag'prelude
 symbol @tag'no'content
