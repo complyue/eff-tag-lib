@@ -11,96 +11,99 @@ symbol @tag'write'out
 symbol @tag'write'payload
 
 
-# the generic tag templating procedure, usually "partially applied" with tag name and default stuff, and named after the actual tag name, as separate procedures
-method tag(
-  @tag'name,
-  @tag'prelude= None, @tag'no'content= false,
-  ** @tag'attrs,
-) {
-
-  let
-  , tagAttrs = scope$ namespace tagAttrs (** @tag'attrs) pass
-  , fragments = []
-
-  return interpreter @( @tag'name ++ "'tag" ) (callerScope, tagBlockExpr) {
-
-    effect {
-
-      method @tag'attrs(tagAttrManiExpr) {
-        tagAttrs.eval$ tagAttrManiExpr
-      }
-
-      method @tag'inner'text(text'frag) (
-        () => perform @tag'write'payload(text'frag)
-      ) :> fragments
-
-      method @tag'write'out(tagOutput) tagOutput :> fragments
-
-    }
-
-    # a block decorator shoud honor special flow control values as the result of the evaluation, and cooperate accordingly, like this:
-    case callerScope.eval$ tagBlockExpr of {
-      { continue } -> { return { continue } } # decorated body issued { continue }
-      { break } -> { return { break } } # decorated body issued { break }
-      { return nil } -> { return { return nil } } # decorated body issued { return nil }
-      { return rtn } -> { return { return rtn } } # decorated body issued { return xxx }
-    } @=> { # "finally" i.e. anyway, do these, even early returning
-      perform @tag'write'out$ () => {
-
-        do perform @tag'write'payload$ @tag'prelude
-        if @tag'prelude is not None
-
-        open = '<' ++ @tag'name ++ ' ' ++ ' '.join(
-          *()=<
-          do if avalue
-          then aname ++ '="' ++ avalue ++ '"'
-          else aname
-          for (aname, avalue) from tagAttrs.attrs()
-        )
-
-        ;| @tag'no'content -> {
-          perform @tag'write'payload$ open ++ ' />'
-        }
-
-        perform @tag'write'payload$ open ++ '>'
-
-        for frag from fragments.reverse do frag()
-
-        perform @tag'write'payload$ '</' ++ @tag'name ++ '>'
-
-      }
-    }
-  }
-
-}
-
-
 # the top level tag procedure runner
 interpreter runTagScript( callerScope, tagScript ) {
 
+  # run it on-the-fly at top level
   effect method @tag'write'out(tagOutput) tagOutput()
 
-  callerScope.eval$ tagScript
+  # void to ignore special (esp. flow ctrl) values from the script
+  void callerScope.eval$ tagScript
 
 }
 
 
 # %%
 
-# manually "currify" `tag()` to obtain lib methods named after actual tag name,
-# and with meaningful defaults
-# todo schematic validations, or even reform into structure APIs
+namespace html () {
 
-method html (**attrs) tag('html', '<!DOCTYPE html>', **attrs)
-method head (**attrs) tag('head', **attrs)
-method title (**attrs) tag('title', **attrs)
-method style (**attrs) tag('style', type= 'text/css', **attrs)
-method body (**attrs) tag('body', **attrs)
-method form (**attrs) tag('form', method= 'post', **attrs)
-method input (**attrs) tag('input', @tag'no'content= true, **attrs)
-method textarea (**attrs) tag('textarea', **attrs)
-method p (**attrs) tag('p', **attrs)
+  # the generic tag templating procedure, usually "partially applied" with tag name and default stuff, and named after the actual tag name, as separate procedures
+  method tag(
+    @tag'name,
+    @tag'prelude= None, @tag'no'content= false,
+    ** @tag'attrs,
+  ) {
 
+    let
+    , tagAttrs = scope$ namespace tagAttrs (** @tag'attrs) pass
+    , fragments = []
+
+    return interpreter @( @tag'name ++ "'tag" ) (callerScope, tagBlockExpr) {
+
+      effect {
+
+        method @tag'attrs(tagAttrManiExpr) {
+          void tagAttrs.eval$ tagAttrManiExpr
+        }
+
+        method @tag'inner'text(text'frag) (
+          () => perform @tag'write'payload(text'frag)
+        ) :> fragments
+
+        method @tag'write'out(tagOutput) tagOutput :> fragments
+
+      }
+
+      # a block decorator shoud honor special flow control values as the result of the evaluation, and cooperate accordingly, like this:
+      case callerScope.eval$ tagBlockExpr of {
+        { continue } -> { return { continue } } # decorated body issued { continue }
+        { break } -> { return { break } } # decorated body issued { break }
+        { return nil } -> { return { return nil } } # decorated body issued { return nil }
+        { return rtn } -> { return { return rtn } } # decorated body issued { return xxx }
+      } @=> { # "finally" i.e. anyway, do these, even early returning
+        perform @tag'write'out$ () => {
+
+          do perform @tag'write'payload$ @tag'prelude
+          if @tag'prelude is not None
+
+          open = '<' ++ @tag'name ++ ' ' ++ ' '.join(
+            *()=<
+            do if avalue
+            then aname ++ '="' ++ avalue ++ '"'
+            else aname
+            for (aname, avalue) from tagAttrs.attrs()
+          )
+
+          ;| @tag'no'content -> {
+            perform @tag'write'payload$ open ++ ' />'
+          }
+
+          perform @tag'write'payload$ open ++ '>'
+
+          for frag from fragments.reverse do frag()
+
+          perform @tag'write'payload$ '</' ++ @tag'name ++ '>'
+
+        }
+      }
+    }
+
+  }
+
+
+  # manually "currify" `tag()` to obtain lib methods named after actual tag name, and with meaningful defaults
+  # todo schematic validations, or even reform into structural APIs
+
+  method html (**attrs) tag('html', '<!DOCTYPE html>', **attrs)
+  method head (**attrs) tag('head', **attrs)
+  method title (**attrs) tag('title', **attrs)
+  method style (**attrs) tag('style', type= 'text/css', **attrs)
+  method body (**attrs) tag('body', **attrs)
+  method form (**attrs) tag('form', method= 'post', **attrs)
+  method input (**attrs) tag('input', @tag'no'content= true, **attrs)
+  method textarea (**attrs) tag('textarea', **attrs)
+  method p (**attrs) tag('p', **attrs)
+}
 
 # %%
 
@@ -119,34 +122,34 @@ method qform(
   , size = '40'
   , pattern = '[a-zA-Z0-9 ]+'
 
-  html()$ {
-    head()$ title()$ pass
-    style()$ perform @tag'inner'text$ css
-    body()$ {
-      form(action= action, method= 'post',)$ {
+  html.html()$ {
+    html.head()$ html.title()$ pass
+    html.style()$ perform @tag'inner'text$ css
+    html.body()$ {
+      html.form(action= action, method= 'post',)$ {
 
-        p()$ perform @tag'inner'text
+        html.p()$ perform @tag'inner'text
         $ 'Your Name (required)'
-        input(
+        html.input(
           type= 'text', required= '',
           name= "cf-name", value= cf'name,
           size= size, pattern= pattern,
         )$ pass
 
-        p()$ perform @tag'inner'text
+        html.p()$ perform @tag'inner'text
         $ 'Your Subject (required)'
-        input(type= 'text', required= '',
+        html.input(type= 'text', required= '',
           name= "cf-subject", value= cf'subject,
           size= size, pattern= pattern,
         )$ pass
 
-        p(id= 'demoFont')$ perform @tag'inner'text
+        html.p(id= 'demoFont')$ perform @tag'inner'text
         $ 'Your Message (required)'
-        textarea(required= '', rows= 10, cols= 35, name= "cf-message",)$ {
+        html.textarea(required= '', rows= 10, cols= 35, name= "cf-message",)$ {
           perform @tag'inner'text(cf'message)
         }
 
-        input(type= 'submit', name= 'cf-submitted', value= 'Send',)$ pass
+        html.input(type= 'submit', name= 'cf-submitted', value= 'Send',)$ pass
       }
     }
   }
