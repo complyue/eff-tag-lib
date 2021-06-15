@@ -38,32 +38,37 @@ method tag(
 
     }
 
-    callerScope.eval$ tagBlockExpr
+    # a block decorator shoud honor special flow control values as the result of the evaluation, and cooperate accordingly, like this:
+    case callerScope.eval$ tagBlockExpr of {
+      { continue } -> { return { continue } } # decorated body issued { continue }
+      { break } -> { return { break } } # decorated body issued { break }
+      { return nil } -> { return { return nil } } # decorated body issued { return nil }
+      { return rtn } -> { return { return rtn } } # decorated body issued { return xxx }
+    } @=> { # "finally" i.e. anyway, do these, even early returning
+      perform @tag'write'out$ () => {
 
-    perform @tag'write'out$ () => {
+        do perform @tag'write'payload$ @tag'prelude
+        if @tag'prelude is not None
 
-      do perform @tag'write'payload$ @tag'prelude
-      if @tag'prelude is not None
-
-      open = '<' ++ @tag'name ++ ' ' ++ ' '.join(
-        *()=<
-        do (if avalue
+        open = '<' ++ @tag'name ++ ' ' ++ ' '.join(
+          *()=<
+          do if avalue
           then aname ++ '="' ++ avalue ++ '"'
           else aname
-        ) if not aname.startsWith('__')
-        for (aname, avalue) from tagAttrs.attrs()
-      )
+          for (aname, avalue) from tagAttrs.attrs()
+        )
 
-      ;| @tag'no'content -> {
-        perform @tag'write'payload$ open ++ ' />'
+        ;| @tag'no'content -> {
+          perform @tag'write'payload$ open ++ ' />'
+        }
+
+        perform @tag'write'payload$ open ++ '>'
+
+        for frag from fragments.reverse do frag()
+
+        perform @tag'write'payload$ '</' ++ @tag'name ++ '>'
+
       }
-
-      perform @tag'write'payload$ open ++ '>'
-
-      for frag from fragments.reverse do frag()
-
-      perform @tag'write'payload$ '</' ++ @tag'name ++ '>'
-
     }
   }
 
